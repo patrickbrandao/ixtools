@@ -398,21 +398,34 @@ echo
 
     echo_success
 
+    _echon "TEST :: ARP-Request Seq Flood to $client_macaddr (demora) "
+    tmpseqarp="/tmp/ixtools-seqarp-$RANDOM"
+    echo -n > $tmpseqarp
 
-    _echon "TEST :: ARP-Request Flood to $client_macaddr (demora) "
-    
     for ipmac in $(cat $v4maclist); do
 	ip=$(echo $ipmac | cut -f1 -d';')
 	mac=$(echo $ipmac | cut -f2 -d';')
-	$HERE/tools/arp-send.sh $v4dev \
-	    $client_ipv4addr $ip \
-	    $mac $client_macaddr \
-	&& continue
+	rstr=$(nping \
+	    --source-mac "$mac" \
+	    --arp $client_ipv4addr \
+	    --arp-sender-ip $ip \
+	    -e eth3.1010 -c 5 \
+	    --rate 100 \
+	    -d0  2>&1 | grep 'Raw packets sent'
+	); rno="$?"
+	echo "$ip;$mac;$rno;$rstr" >> $tmpseqarp
     done
     echo_success
+    # contar numero de testes perfeitos
+    arp1=$(cat $tmpseqarp | egrep '\(0.00%' | wc -l)
+    arp2=$(cat $tmpseqarp | egrep '\(100.00%' | wc -l)
+    echo "ARP REPORT: $tmpseqarp"
+    #echo "v4tmplist: $v4tmplist"
 
 echo; echo; echo; echo
 echo "Relatorio:"
 cat $repfile
 echo
+
+exit
 
